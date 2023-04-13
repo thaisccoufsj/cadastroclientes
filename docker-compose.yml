@@ -1,0 +1,37 @@
+version: '3.7'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    container_name: ${APP_NAME}
+    restart: unless-stopped
+    tty: true
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - network
+    ports:
+      - "80:80"
+      - "443:443"
+      - "6001:6001"
+  database:
+    container_name: mysql
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - '${DB_PORT}:3306'
+    volumes:
+      - ./.docker/database/data:/var/lib/mysql
+    networks:
+      - network
+networks:
+  network:
+    name: network
+    driver: bridge
