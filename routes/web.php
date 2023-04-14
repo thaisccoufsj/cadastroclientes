@@ -14,10 +14,15 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+/**
+ * Rotas de exibição
+ */
 Route::get('/', [CustomerController::class, 'list'])->name('list-customer');
-Route::get('/', [CustomerController::class, 'search'])->name('search-customer');
-Route::get('/new', [CustomerController::class, 'create'])->name('create-customer');
-Route::post('/new', [CustomerController::class, 'store'])->name('store-customer');
-Route::get('/delete/{id}', [CustomerController::class, 'delete'])->name('delete-customer');
-Route::get('/edit/{id}', [CustomerController::class, 'edit'])->name('edit-customer');
-Route::post('/edit', [CustomerController::class, 'save'])->name('change-customer');
+Route::get('/customer/new', [CustomerController::class, 'create'])->name('create-customer');
+Route::get('/customer/edit/{id}', [CustomerController::class, 'edit'])->name('edit-customer');
+
+/**
+ * Rotas de ação
+ */
+Route::post('/customer/save', [CustomerController::class, 'save'])->name('save-customer');
+Route::get('/customer/delete/{id}', [CustomerController::class, 'delete'])->name('delete-customer');

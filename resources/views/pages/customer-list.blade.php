@@ -9,9 +9,9 @@
       Consulta de Clientes
     </div>
     <div class="card-body">
-      <form id='customer-search-form' method="get" action="{{ route('search-customer') }}">
+      <form id='customer-search-form' method="get" action="{{ route('list-customer') }}">
         @include('pages.customer-base-form')
-        <button type="button" class="btn btn-secondary" onclick="$('#customer-search-form').get(0).reset()">Limpar</button>
+        <button type="button" class="btn btn-secondary" data-clear-form-button>Limpar</button>
         <button type="button" class="btn btn-success" onclick="window.location='{{route('create-customer')}}'">Adicionar</button>
         <button type="submit" class="btn btn-primary">Buscar</button>
       </form>
@@ -43,11 +43,12 @@
                 <tbody>
 
                 @foreach($customers as $customer)
+                  <?php $customer = (object) $customer; ?>
                     <tr>
                         <th scope="row">{{$customer->id}}</th>
                         <td>{{$customer->name}}</td>
                         <td>{{$customer->cpf}}</td>
-                        <td>{{$customer->birthDate->format('d/m/Y')}}</td>
+                        <td>{{$customer->birthDate}}</td>
                         <td>{{$customer->gender}}</td>
                         <td>{{$customer->address}}</td>
                         <td>{{$customer->state}}</td>
@@ -63,11 +64,8 @@
                 </tbody>
             </table>
             <div class="d-flex justify-content-center">
-                {!! $customers->appends(Request::except('page'))->render() !!}
+                {!! $paginator->appends(Request::except('page'))->render() !!}
             </div>
-            <p>
-                Exibindo {{$customers->count()}} de {{ $customers->total() }} clientes.
-            </p>
         @endif
     </div>
   </div>
