@@ -23,4 +23,4 @@
 
 ![New](/screenshot/customer-new.png "New")
 
-![Edit](/screenshot/customer-edir.png "Edit")
+![Edit](/screenshot/customer-edit.png "Edit")
