@@ -17,3 +17,10 @@
 - Generate application key `php artisan key:generate`
 - Run the migrations `php artisan migrate`
 - Access `localhost` in browser
+
+#Result
+![Home](/screenshot/customers-home.png "Home")
+
+![New](/screenshot/customer-new.png "New")
+
+![Edit](/screenshot/customer-edir.png "Edit")

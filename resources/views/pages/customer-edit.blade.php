@@ -9,7 +9,7 @@
       Cadastro de clientes
     </div>
     <div class="card-body">
-      <form method="post" action="{{ route('change-customer') }}">
+      <form method="post" action="{{ route('save-customer') }}">
         @include('pages.customer-base-form')
         <input type="hidden" name="id" value="{{$customer->id}}" />
         <button type="button" class="btn btn-secondary" onclick="location.href = '{{ route('list-customer') }}'">Voltar para Listagem</button>

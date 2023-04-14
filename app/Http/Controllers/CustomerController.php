@@ -2,27 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Apis\CustomerApi\CustomerClient;
 use App\Customer;
-use App\Rules\CpfValidation;
 use Carbon\Carbon;
-use Exception;
 use Illuminate\Http\Request;
-use Validator;
+use Illuminate\Pagination\LengthAwarePaginator;
+use stdClass;
 
 class CustomerController extends Controller
 {
     /**
-     * noem dos campos para exibição
+     * Client da Api
+     *
+     * @var CustomerClient
      */
-    const EXHIBITION_FIELD_NAMES = [
-        'name' => 'nome',
-        'cpf' => 'cpf',
-        'birthdate' => 'data de nascimento',
-        'gender' => 'sexo',
-        'address' => 'endereço',
-        'state' => 'estado',
-        'city' => 'cidade'
-    ];
+    private $client;
+
+    /**
+     * Construtor
+     */
+    public function __construct()
+    {
+        $this->client = new CustomerClient();
+    }
 
     /**
      * Exibe formulário de criação de cliente
@@ -33,75 +35,117 @@ class CustomerController extends Controller
     }
 
     /**
-     * Exibe formulário de edição de cliente
+     * Exibe formulário de edição de um cliente
+     *
+     * @param int $id
+     * @return mixed
      */
-    public function edit($id)
+    public function edit(int $id)
     {
-        $customer = Customer::where('id', $id)->first();
+        $response = $this->client->getCustomers(['id' => $id]);
 
-        if (!$customer) {
+        if ($response->failed()) {
+            return redirect()->route('list-customer')->with('error', 'Houve um erro ao consultar o cliente solicitado');
+        }
+
+        $data = (array) $response->getData();
+        $customerData = current($data);
+
+        if (!$customerData) {
             return redirect()->route('list-customer')->with('error', 'Cliente não encontrado para edição');
         }
+
+        $customer = (object) current($customerData);
 
         return view('pages.customer-edit', ['customer' => $customer]);
     }
 
     /**
-     * Lista os clientes
-     */
-    public function list()
-    {
-        $customers = Customer::paginate($this->pageSize);
-        return view('pages.customer-list', ['customers' => $customers]);
-    }
-
-    /**
-     * Busca e lista os clientes
-     * 
-     * @param Request $request
-     */
-    public function search(Request $request)
-    {
-        $customer = $this->buildCustomerObject($request);
-        $customers = $this->requestHasNotemptyFields($request) ?
-            $this->filter($request) :
-            Customer::paginate($this->pageSize);
-
-        return view('pages.customer-list', ['customer' => $customer, 'customers' => $customers]);
-    }
-
-    public function filter(Request $request)
-    {
-        $queryBuilder = Customer::query();
-
-        foreach ($request->all() as $field => $value) {
-            if (in_array($field, ['_token', 'gender', 'page']) || empty($value)) {
-                continue;
-            }
-
-            if (str_contains($field, 'date')) {
-                $value = Carbon::createFromFormat('d/m/Y', $value)->format('Y-m-d');
-            }
-
-            $queryBuilder->where($field, 'like', "%$value%");
-        }
-
-        if ($request->gender) {
-            $queryBuilder->where('gender', $request->gender);
-        }
-
-        return $queryBuilder->paginate($this->pageSize);
-    }
-
-    /**
-     * Monsta o objeto de cliente a partir dos dados da request
+     * Edita um cliente
      *
      * @param Request $request
-     * @return Customer
+     * @return mixed
      */
-    private function buildCustomerObject(Request $request): Customer
+    public function save(Request $request)
     {
-        $customer = new Customer();
+        $customer = $this->buildCustomerObject($request);
+        $customerData = $request->all();
+        unset($customerData['_token']);
+        if ($request->birthDate) {
+            $customerData['birthDate'] = Carbon::createFromFormat('d/m/Y', $request->birthDate)->format('Y-m-d');
+        }
+
+        $response = null;
+
+        $response = array_key_exists('id', $customerData) ?
+            $this->client->editCustomer($customerData) :
+            $this->client->insertCustomer($customerData);
+
+        if ($response->failed()) {
+            $message = 'Houve um erro ao salvar o cliente.';
+
+            //Erro de validação
+            if ($response->getCode() == 400) {
+                $message = $response->getMessage();
+                $message = json_decode($response->getMessage(), true)['message'];
+                return back()->with('errors', $message)->with('customer', $customer);
+            }
+
+            return back()->with('error', $message)->with('customer', $customer);
+        }
+
+        return redirect()->route('list-customer')->with('sucess', 'Cliente salvo com sucesso');
+    }
+
+    /**
+     * Lista os clientes
+     *
+     * @param Request $request
+     * @return mixed
+     */
+    public function list(Request $request)
+    {
+        $response = $this->client->getCustomers($request->all());
+        $responseData = (array) $response->getData();
+        $customers = array_key_exists('customers', $responseData) ? (array) $responseData['customers'] : [];
+        $total = array_key_exists('total', $responseData) ? (string) $responseData['total'] : '';
+        $perPage = array_key_exists('perPage', $responseData) ? (string) $responseData['perPage'] : '';
+        $currentPage = array_key_exists('currentPage', $responseData) ? (string) $responseData['currentPage'] : '';
+        $paginator = new LengthAwarePaginator($customers, $total, $perPage, $currentPage);
+
+        return view('pages.customer-list', [
+            'customer' => $this->buildCustomerObject($request),
+            'customers' => $customers,
+            'paginator' => $paginator
+        ]);
+    }
+
+    /**
+     * Exclui um cliente
+     *
+     * @param int $id
+     * @return mixed
+     */
+    public function delete($id)
+    {
+        $response = $this->client->deleteCustomer($id);
+
+        if ($response->failed()) {
+            return redirect()->route('list-customer')->with('error', 'Não foi possível excluir o cliente');
+        }
+
+        return redirect()->route('list-customer')->with('sucess', 'Cliente excluído com sucesso');
+    }
+
+    /**
+     * Monta o objeto de cliente a partir dos dados da request
+     *
+     * @param Request $request
+     * @return object
+     */
+    private function buildCustomerObject(Request $request): object
+    {
+        $customer = new stdClass;
         $customer->name = $request->name;
         $customer->cpf = $request->cpf;
         $customer->birthDate = $request->birthdate ?
@@ -112,87 +156,5 @@ class CustomerController extends Controller
         $customer->state = $request->state;
         $customer->city = $request->city;
         return $customer;
-    }
-
-    /**
-     * Insere um novo cliente
-     *
-     * @param Request $request
-     */
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), $this->getValidationRules(), [], self::EXHIBITION_FIELD_NAMES);
-
-        if ($validator->fails()) {
-            return back()->with('errors', $validator->errors());
-        }
-
-        $customer = $this->buildCustomerObject($request);
-
-        try {
-            $customer->save();
-        } catch (Exception $e) {
-            return back()->with('error', 'Não foi possível salvar o cliente');
-        }
-
-        return redirect()->route('list-customer')->with('sucess', 'Cliente criado com sucesso');
-    }
-
-    /**
-     * Edita um novo cliente
-     *
-     * @param Request $request
-     */
-    public function save(Request $request)
-    {
-        $validator = Validator::make($request->all(), $this->getValidationRules(), [], self::EXHIBITION_FIELD_NAMES);
-
-        if ($validator->fails()) {
-            return back()->with('errors', $validator->errors());
-        }
-
-        $customer = $this->buildCustomerObject($request);
-
-        try {
-            $customer->save();
-        } catch (Exception $e) {
-            return back()->with('error', 'Não foi possível salvar o cliente');
-        }
-
-        return redirect()->route('list-customer')->with('sucess', 'Cliente editado com sucesso');
-    }
-
-    /**
-     * Exclui um cliente
-     *
-     * @param int $id
-     */
-    public function delete($id)
-    {
-        try {
-            Customer::where('id', $id)->delete();
-        } catch (Exception $e) {
-            return back()->with('error', 'Não foi possível excluir o cliente');
-        }
-
-        return redirect()->route('list-customer')->with('sucess', 'Cliente excluído com sucesso');
-    }
-
-    /**
-     * Obtém as regras de validação do formulário
-     *
-     * @return array
-     */
-    public function getValidationRules(): array
-    {
-        return [
-            'name' => ['required', 'min:3'],
-            'cpf' => ['required', 'min:14','max:14', new CpfValidation],
-            'birthdate' => ['required', 'min:10', 'max:10'],
-            'gender' => ['required'],
-            'address' => ['required'],
-            'state' => ['required'],
-            'city' => ['required']
-        ];
     }
 }

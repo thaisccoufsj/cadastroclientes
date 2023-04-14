@@ -5,11 +5,17 @@
 </div>
 @endif
 
-@if ($errors->any())
+@if (count($errors) > 0)
     <div class="alert alert-danger">
         <ul>
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
+            @foreach ($errors as $error)
+                <li>
+                    @if(is_array($error))
+                        {{$error[0]}}
+                    @else
+                        {{ $error }}
+                    @endif 
+                </li>
             @endforeach
         </ul>
     </div>

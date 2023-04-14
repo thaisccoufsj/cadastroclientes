@@ -3,3 +3,4 @@
 <script type="text/javascript" src="{{ URL::asset('js/jquery-3.6.4.min.js') }}"></script>
 <script type="text/javascript" src="{{ URL::asset('js/jquery.mask.js') }}"></script>
 <script type="text/javascript" src="{{ URL::asset('js/masks.js') }}"></script>
+<script type="text/javascript" src="{{ URL::asset('js/forms.js') }}"></script>

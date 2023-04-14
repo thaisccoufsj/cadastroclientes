@@ -1,3 +1,6 @@
+@if(!isset($customer) && $sessionCustomer = Session::get('customer'))
+    <?php $customer =  $sessionCustomer?>
+@endif
 @csrf
 <div class="row">
     <div class="col-md-3 mb-3">
@@ -10,7 +13,7 @@
     </div>
     <div class="col-md-3 mb-3">
     <label for="birthdate">Data de Nascimento</label>
-    <input type="text" class="form-control date" name="birthdate" placeholder="dd/mm/aaaa" @if(isset($customer) && $customer->birthDate) value="{{$customer->birthDate->format('d/m/Y')}}" @endif>
+    <input type="text" class="form-control date" name="birthDate" placeholder="dd/mm/aaaa" @if(isset($customer) && $customer->birthDate) value="{{$customer->birthDate}}" @endif>
     </div>
     <div class="col-md-3 mb-3">
     <label for="birthdate">Sexo</label>
